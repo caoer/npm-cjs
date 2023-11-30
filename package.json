@@ -1,0 +1,10 @@
+{
+  "name": "zitao-npm",
+  "version": "1.0.0",
+  "main": "index.js",
+  "author": "zitao xiong <caoer115@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "strip-json-comments": "^5.0.1"
+  }
+}

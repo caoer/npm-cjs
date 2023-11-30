@@ -1,0 +1,47 @@
+on:
+    workflow_dispatch:
+      inputs:
+        package_version:
+          description: 'Package version to be published to NPM. Defaults to current version of dnum.'
+          required: false
+        dist_tag:
+          description: 'What dist tag should be used for publishing (e.g. `next` vs `latest`). Defaults to `next`.'
+          required: true
+          default: next
+  
+name: Publish dnum
+
+jobs:
+  prebuild-node:
+    name: Publish package to npm
+    runs-on: ubuntu-latest
+    steps:
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v2
+        with:
+          node-version: 16
+
+      - uses: actions/checkout@v2
+
+        # We're changing dnum package.json here and republishing it as a CommonJS module under the name dnum-cjs.
+      - name: Build CommonJS
+        run: |
+          yarn install
+          node build-dnum.mjs
+
+        # Version is set manually, because sometimes (when we make a mistake) we might need to release
+        # new versions for the same version of dnum-cjs. major.minor should be kept. e.g. dnum@12.0.0
+        # can be occasionally released as dnum-cjs 12.0.1 but not 12.1.0.
+      - name: Set version if provided
+        if: ${{ github.event.inputs.package_version != null }}
+        run: >
+          jq '.version = "${{github.event.inputs.package_version}}"' dnum/package.json > dnum/temp-package.json
+          && rm dnum/package.json && mv dnum/temp-package.json dnum/package.json
+
+      - uses: JS-DevTools/npm-publish@v1
+        with:
+          package: "./dnum/package.json"
+          token: ${{ secrets.NPM_TOKEN }}
+          access: "public"
+          dry-run: false
+          tag: ${{ github.event.inputs.dist_tag }}
